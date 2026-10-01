@@ -1,98 +1,123 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView } from "react-native";
+import { useRef, useState } from "react";
+import Header from "@/components/header";
+import Search from "@/components/search";
+import products from "../data/products.json";
+import ProductGrid from "@/components/product-grid";
+import CatalogHeader from "../components/catalog-header";
+import Filter from "../components/filter";
+import Sort from "../components/sort";
+import FloatingButtons from "../components/floating-buttons";
+import Footer from "../components/footer";
+import CatalogDescription from "../components/catalog-description";
+import PaymentInfo from "../components/payment-info";
+import { Filters } from "../types/filter";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function Index() {
+  const [search, setSearch] = useState("");
+  const scrollRef = useRef<ScrollView>(null);
+  const [showTop, setShowTop] = useState(false);
+  const [sort, setSort] = useState("Новинки");
+  const [filters, setFilters] = useState<Filters>({
+    minPrice: 56699,
+    maxPrice: 81899,
+    series: null,
+    memory: null,
+    color: null,
+    sim: null,
+    ram: null,
+  });
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+  let filteredProducts = [...products];
+
+  if (filters.minPrice || filters.maxPrice) {
+    filteredProducts = filteredProducts.filter(
+      (item) =>
+        item.price >= filters.minPrice && item.price <= filters.maxPrice,
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
+  if (filters.series) {
+    filteredProducts = filteredProducts.filter(
+      (item) => item.series === filters.series,
+    );
+  }
+
+  if (filters.memory) {
+    filteredProducts = filteredProducts.filter(
+      (item) => item.memory === filters.memory,
+    );
+  }
+
+  if (filters.color) {
+    filteredProducts = filteredProducts.filter(
+      (item) => item.color === filters.color,
+    );
+  }
+
+  if (filters.sim) {
+    filteredProducts = filteredProducts.filter(
+      (item) => item.sim === filters.sim,
+    );
+  }
+
+  if (filters.ram) {
+    filteredProducts = filteredProducts.filter(
+      (item) => item.ram === filters.ram,
+    );
+  }
+
+  if (search.trim() !== "") {
+    filteredProducts = filteredProducts.filter((product) =>
+      product.name.toLowerCase().includes(search.toLowerCase()),
+    );
+  }
+
+  let finalProducts = [...filteredProducts];
+
+  if (sort === "Менша ціна") {
+    finalProducts.sort((a, b) => a.price - b.price);
+  }
+
+  if (sort === "Більша ціна") {
+    finalProducts.sort((a, b) => b.price - a.price);
+  }
+
+  if (sort === "Новинки") {
+    finalProducts.sort((a, b) => Number(b.isNew) - Number(a.isNew));
+  }
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View style={{ flex: 1 }}>
+      <Header />
+      <ScrollView
+        ref={scrollRef}
+        onScroll={(event) => {
+          const y = event.nativeEvent.contentOffset.y;
+
+          setShowTop(y > 300);
+        }}
+        scrollEventThrottle={16}
+      >
+        <Search search={search} setSearch={setSearch} />
+        <CatalogHeader />
+        <Filter filters={filters} setFilters={setFilters} />
+        <Sort sort={sort} setSort={setSort} />
+        <ProductGrid products={finalProducts} />
+        <PaymentInfo />
+        <CatalogDescription />
+        <Footer />
+      </ScrollView>
+
+      <FloatingButtons
+        showTop={showTop}
+        onTop={() => {
+          scrollRef.current?.scrollTo({
+            y: 0,
+            animated: true,
+          });
+        }}
+      />
+    </View>
   );
 }
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
